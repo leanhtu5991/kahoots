@@ -20,6 +20,103 @@ app.set('port', port);
  */
 
 var server = http.createServer(app);
+var io = require('socket.io').listen(server);
+var allRoom = [];
+var playerConnect = {};
+io.on('connection', (socket)=>{
+  var currentRoom;
+  socket.on("create-room", function(data){
+    var playerInRoomNew = [];
+    var playerInRoomRecent = [];
+    if(allRoom.includes(data.gamePin)){
+      socket.emit("server-send-room-create", "Name room exist");
+    } else {
+      socket.namePlayer = data.name;
+      socket.room = data.gamePin;
+      socket.join(data.gamePin);
+      allRoom.push(data.gamePin);
+      playerConnect[socket.id] = socket.namePlayer;
+      //go out of room recent
+      io.sockets.sockets[socket.id].leave(currentRoom);
+
+      //send players of room before
+      io.in(currentRoom).clients((err, clients) => {
+        for(var i=0; i<clients.length; i++){
+          playerInRoomRecent.push(playerConnect[clients[i]])
+        }
+        io.sockets.in(currentRoom).emit("server-send-list-player-join", {gamePin:data.gamePin, players: playerInRoomRecent});
+      })
+
+      //send plyers of new room
+      io.in(data.gamePin).clients((err, clients) => {
+        for(var i=0; i<clients.length; i++){
+          playerInRoomNew.push(playerConnect[clients[i]])  
+        }
+        socket.emit("server-send-room-create", {gamePin:data.gamePin, players:playerInRoomNew});
+        currentRoom = data.gamePin;
+        io.sockets.in(data.gamePin).emit("server-send-list-player-join", {gamePin:data.gamePin, players: playerInRoomNew})
+      });
+    }
+  })
+
+  // If player join another room
+  socket.on("join-room", function(data){
+    var playerInRoomNew = [];
+    var playerInRoomRecent = [];
+    
+    if(!allRoom.includes(data.gamePin)){
+      socket.emit("server-send-room-create", "Name room not exist");
+    } else {
+      socket.namePlayer = data.name;
+      socket.room = data.gamePin;
+      socket.join(data.gamePin);
+      playerConnect[socket.id] = socket.namePlayer;
+      io.sockets.sockets[socket.id].leave(currentRoom);
+
+     //go out of room recent
+     io.sockets.sockets[socket.id].leave(currentRoom);
+     
+      //send players of room before
+      io.in(currentRoom).clients((err, clients) => {
+        for(var i=0; i<clients.length; i++){
+          playerInRoomRecent.push(playerConnect[clients[i]])
+        }
+        io.sockets.in(currentRoom).emit("server-send-list-player-join", {gamePin:data.gamePin, players: playerInRoomRecent});
+      })
+
+      //send plyers of new room
+      io.in(data.gamePin).clients((err, clients) => {
+        for(var i=0; i<clients.length; i++){
+          playerInRoomNew.push(playerConnect[clients[i]])  
+        }
+        socket.emit("server-send-room-create", {gamePin:data.gamePin, players:playerInRoomNew});
+        currentRoom = data.gamePin;
+        io.sockets.in(data.gamePin).emit("server-send-list-player-join", {gamePin:data.gamePin, players: playerInRoomNew})
+      });
+    }  
+  })
+  // if player start game
+  socket.on('startGame', function () {
+    io.sockets.in(currentRoom).emit("server-send-startGame", {startGame: true})
+  })
+
+  // get score and send to all player in room
+  socket.on('sendScore', function (data) {
+    io.sockets.in(data.gamePin).emit("getScore", data)
+  })
+  // if player disconnect
+  socket.on('disconnect', function () {
+    playerDel = socket.id;
+    var playerInRoomRecent = [];
+    io.in(currentRoom).clients((err, clients) => {
+      for(var i=0; i<clients.length; i++){
+        playerInRoomRecent.push(playerConnect[clients[i]]);
+      }
+      io.sockets.in(currentRoom).emit("server-send-list-player-join", {gamePin:currentRoom, players: playerInRoomRecent})
+    });
+    delete playerConnect[playerDel];
+  });
+})
 
 /**
  * Listen on provided port, on all network interfaces.

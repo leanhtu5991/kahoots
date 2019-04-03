@@ -4,15 +4,15 @@ var bodyParser = require('body-parser');
 var app = express();
 var router = express.Router();
 var index = require('./routes/index');
-// var MongoClient = require('mongodb').MongoClient;
 var passport = require('passport');
 const mongoose = require('./config/database');
 var jwt = require('jsonwebtoken');
 mongoose.connection.on('error', console.error.bind(console, 'MongoDB connection error:'));
-const env = require('dotenv').load()
+const env = require('dotenv').load();
+var startTasks = require('./startTasks');
 
 app.set('secretKey', process.env.JWT_SECRET );
-
+startTasks.createFirstUserIfNotExists();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true }));
 

@@ -8,7 +8,8 @@ module.exports.register = function (req, res) {
     var userData = {
         name: req.body.name,
         email: req.body.email,
-        password: req.body.password
+        password: req.body.password,
+        score: 0
       }
     userModel.create(userData, function (err, user) {
         if (err) {
@@ -31,7 +32,7 @@ module.exports.login = function (req, res) {
                 res.json({status:"error", message: "not found this user", data:null});
             } else {
                 if (bcrypt.compareSync(req.body.password, userInfo.password)) {
-                    const token = jwt.sign({id: userInfo._id}, req.app.get('secretKey'), { expiresIn: '1h' });
+                    const token = jwt.sign({user: userInfo}, req.app.get('secretKey'), { expiresIn: '1h' });
                     res.json({status:"success", message: "user found!!!", user: userInfo, token:token});
                     } else{
                     res.json({status:"error", message: "Invalid email/password!!!", data:null});
@@ -50,7 +51,7 @@ module.exports.getProfile = function (req, res) {
       }
       if (token) {
         var user = jwtDecode(token)
-        userModel.findOne({_id:user.id}, function(err, userInfo){
+        userModel.findOne({_id:user.user._id}, function(err, userInfo){
             res.json (userInfo)
         })
       } else {

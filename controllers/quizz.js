@@ -5,7 +5,6 @@ module.exports.getQuizzfromUser = function (req, res) {
     var userId = req.params.id;
     var allQuizz = [];
     quizzModel.find({ user : userId}, function (err, quizzs) {
-        console.log(quizzs[0].answer['a1'])
         for (let quizz of quizzs){
             quizz = {
                 _id : quizz._id,
@@ -14,14 +13,21 @@ module.exports.getQuizzfromUser = function (req, res) {
                 a2 : quizz.answer['a2'],
                 a3 : quizz.answer['a3'],
                 a4 : quizz.answer['a4'],
-                correct : quizz.correct
+                correct : quizz.correct,
+                user:quizz.user
             }
             allQuizz.push(quizz)
         }
-        console.log(allQuizz)
         res.json(allQuizz)
     })
 }
+
+module.exports.getAllQuizz = function (req, res) {
+    quizzModel.find(function (err, quizzs) {
+        res.json(quizzs);
+    })
+}
+
 module.exports.addQuizz = function (req, res) {
     var userId = req.params.id;
     // user = userModel.findOne({_id : userId});
@@ -59,8 +65,7 @@ module.exports.deleteQuizz = function (req, res) {
     
 }
 module.exports.updateQuizz = function (req, res) {
-    console.log("okkkk server");
-    var quizzId = req.body.quizzId;
+    var quizzId = req.body._id;
     var quizz = {
         question: req.body.question,
         answer: {
@@ -69,10 +74,22 @@ module.exports.updateQuizz = function (req, res) {
             a3:req.body.a3,
             a4:req.body.a4,
         },
-        correct:req.body.correct
+        correct:req.body.correct,
+        user:req.body.user
       }
-      quizzModel.updateOne({_id:quizzId}, quizz,{ upsert: true }, function(err, quizz){
-        console.log(quizz)
+      quizzModel.updateOne({_id:quizzId}, quizz, function(err, quizzInfo){
         res.json({status:"success", message: "quizz update!!!"})
     });
+}
+
+module.exports.deleteAllQuizz = function (req, res) {
+    quizzModel.remove(function(err, obj) {
+        if (err) {
+            console.log(err);
+            return res.json(err);
+        }
+        console.log('deleteQuizz')
+        res.json("delete success");
+      });
+    
 }
